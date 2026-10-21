@@ -15,9 +15,15 @@ services:
         value: manual
       - key: PUBLIC_BASE_URL
         sync: false          # e.g. https://company-airtime-bulk.onrender.com
-      - key: PAYHERO_AUTH
-        sync: false
+      - key: PAYHERO_BASE_URL
+        value: https://backend.payhero.co.ke/api/v2
+      - key: PAYHERO_PROVIDER
+        value: m-pesa
       - key: PAYHERO_CHANNEL_ID
+        sync: false
+      - key: PAYHERO_API_USERNAME
+        sync: false
+      - key: PAYHERO_API_PASSWORD
         sync: false
       - key: ADMIN_TOKEN
         generateValue: true

@@ -1,21 +1,26 @@
 """Company Airtime Bulk - Flask app with PayHero (M-Pesa STK Push) payments."""
-import json, os, re, secrets, sqlite3, time
+import base64, json, os, re, secrets, sqlite3, time
 from contextlib import closing
 
 import requests
 from dotenv import load_dotenv
 from flask import Flask, abort, jsonify, render_template, request
+from werkzeug.middleware.proxy_fix import ProxyFix
 
 load_dotenv()
 app = Flask(__name__)
+app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)  # correct https URLs behind Render
 
 BONUS_RATE = 0.5                                   # 50% extra airtime
 PACKAGES = [10000, 20000, 30000, 50000, 75000, 100000]   # amount PAID (KSh)
 NETWORKS = ["Safaricom", "Airtel", "Telkom"]
 
-PAYHERO_URL = "https://backend.payhero.co.ke/api/v2"
-PAYHERO_AUTH = os.getenv("PAYHERO_AUTH", "")
+PAYHERO_URL = os.getenv("PAYHERO_BASE_URL", "https://backend.payhero.co.ke/api/v2").rstrip("/")
+PAYHERO_PROVIDER = os.getenv("PAYHERO_PROVIDER", "m-pesa")
 CHANNEL_ID = os.getenv("PAYHERO_CHANNEL_ID", "")
+# Basic auth is built from API username + password (or give a ready-made PAYHERO_AUTH)
+PAYHERO_AUTH = os.getenv("PAYHERO_AUTH") or "Basic " + base64.b64encode(
+    f"{os.getenv('PAYHERO_API_USERNAME', '')}:{os.getenv('PAYHERO_API_PASSWORD', '')}".encode()).decode()
 BASE_URL = os.getenv("PUBLIC_BASE_URL", "").rstrip("/")
 FULFILLMENT = os.getenv("FULFILLMENT", "manual")
 ADMIN_TOKEN = os.getenv("ADMIN_TOKEN", "")
@@ -148,12 +153,13 @@ def create_order():
         r = requests.post(f"{PAYHERO_URL}/payments", timeout=25,
                           headers={"Authorization": PAYHERO_AUTH, "Content-Type": "application/json"},
                           json={"amount": paid, "phone_number": payer,
-                                "channel_id": int(CHANNEL_ID), "provider": "m-pesa",
+                                "channel_id": int(CHANNEL_ID), "provider": PAYHERO_PROVIDER,
                                 "external_reference": ref, "customer_name": "Company Airtime Bulk",
-                                "callback_url": f"{BASE_URL}/payhero/callback"})
+                                "callback_url": f"{BASE_URL or request.url_root.rstrip(chr(47))}/payhero/callback"})
         data = r.json()
+        app.logger.info("PayHero response %s: %s", r.status_code, data)
         if r.status_code >= 400 or not data.get("success", True):
-            raise RuntimeError(data)
+            raise RuntimeError(f"{r.status_code} {data}")
         with closing(db()) as c:
             c.execute("UPDATE orders SET payhero_ref=? WHERE ref=?", (data.get("reference"), ref))
             c.commit()

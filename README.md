@@ -33,3 +33,8 @@ Change the bonus in `BONUS_RATE` and the packages in `PACKAGES` (app.py).
 
 The 1 GB disk keeps the orders database safe across deploys. On a free plan
 there is no disk, so orders would be wiped on each restart: use the paid plan.
+
+## If Render shows "No module named 'run'"
+Render's default start command is `gunicorn run:flask_app`. This project now
+includes `run.py` so that works, but the cleanest fix is: Render dashboard >
+your service > Settings > Start Command = `gunicorn app:app`.
