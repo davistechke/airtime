@@ -1,0 +1,11 @@
+<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Admin – Company Airtime Bulk</title>
+<style>body{font-family:system-ui;margin:16px}table{border-collapse:collapse;width:100%;font-size:.85rem}
+td,th{border:1px solid #ccc;padding:6px;text-align:left}.PAID{background:#fff3cd}.DELIVERED{background:#d4edda}.FAILED{background:#f8d7da}
+.w{overflow-x:auto}</style>
+<h2>Orders</h2><div class="w"><table>
+<tr><th>Ref</th><th>Network</th><th>Send to</th><th>Paid</th><th>Airtime</th><th>Status</th><th>Receipt</th><th>Note</th><th></th></tr>
+{% for r in rows %}<tr class="{{r.status}}"><td>{{r.ref}}</td><td>{{r.network}}</td><td>{{r.recipient}}</td>
+<td>{{r.paid}}</td><td>{{r.airtime}}</td><td>{{r.status}}</td><td>{{r.mpesa_receipt or ''}}</td><td>{{r.note or ''}}</td>
+<td>{% if r.status=='PAID' %}<button onclick="fetch('/admin/delivered/{{r.ref}}'+location.search,{method:'POST'}).then(()=>location.reload())">Mark delivered</button>{% endif %}</td></tr>{% endfor %}
+</table></div>

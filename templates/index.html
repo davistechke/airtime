@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="color-scheme" content="light">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Company Airtime Bulk – Get {{bonus}}% Extra Airtime</title>
+<style>
+:root{--bg:#ffffff;--card:#ffffff;--text:#14201a;--muted:#5d6b63;--line:#d9dfdb;--accent:#0a8f3c;--accent-t:#fff;--gold:#b45309;--gold-bg:#fef3c7}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;line-height:1.5;padding:env(safe-area-inset-top,0) 0 env(safe-area-inset-bottom,0)}
+.wrap{max-width:720px;margin:0 auto;padding:20px 16px 40px}
+h1{font-size:1.7rem;margin:8px 0 4px}p.sub{color:var(--muted);margin:0 0 20px}
+.badge{display:inline-block;background:var(--gold-bg);color:var(--gold);font-weight:700;font-size:.8rem;padding:4px 10px;border-radius:99px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:16px}
+h2{font-size:1rem;margin:0 0 12px}
+.nets{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.net{border:2px solid var(--line);border-radius:10px;padding:12px 4px;text-align:center;font-weight:700;cursor:pointer;background:transparent;color:var(--text);font-size:.95rem}
+.net[aria-pressed="true"]{border-color:var(--c);box-shadow:0 0 0 2px var(--c) inset}
+.net i{display:block;width:12px;height:12px;border-radius:50%;background:var(--c);margin:0 auto 6px}
+input{width:100%;padding:13px;border:2px solid var(--line);border-radius:10px;font-size:1.1rem;background:var(--bg);color:var(--text)}
+input:focus{outline:none;border-color:var(--accent)}
+label.s{font-size:.85rem;color:var(--muted);display:block;margin:12px 0 6px}
+.err{color:#d93025;font-size:.85rem;min-height:1.2em;margin:6px 0 0}
+.pk{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+.p{border:2px solid var(--line);border-radius:12px;padding:12px;text-align:left;cursor:pointer;background:transparent;color:var(--text);font:inherit}
+.p[aria-pressed="true"]{border-color:var(--accent);background:var(--bg)}
+.p b{font-size:1.15rem;display:block}.p span{color:var(--muted);font-size:.8rem}
+.p em{display:block;font-style:normal;color:var(--accent);font-weight:700;margin-top:4px}
+.sum{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px dashed var(--line)}
+.sum:last-of-type{border:0}.tot{font-size:1.2rem;font-weight:800;color:var(--accent)}
+button.buy{width:100%;margin-top:14px;padding:15px;border:0;border-radius:12px;background:var(--accent);color:var(--accent-t);font-size:1.05rem;font-weight:800;cursor:pointer}
+button.buy:disabled{opacity:.45;cursor:not-allowed}
+.ok{text-align:center}.ok h2{font-size:1.3rem}
+.note{font-size:.78rem;color:var(--muted);text-align:center}
+[hidden]{display:none!important}
+@media(min-width:560px){.pk{grid-template-columns:repeat(3,1fr)}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<span class="badge">🎁 GET {{bonus}}% EXTRA AIRTIME</span>
+<h1>Company Airtime Bulk</h1>
+<p class="sub">Safaricom, Airtel &amp; Telkom. Buy KSh 10,000 and get KSh 15,000 airtime. Pay once, get {{bonus}}% more.</p>
+
+<div id="form">
+<div class="card"><h2>1. Choose network</h2><div class="nets" id="nets"></div></div>
+
+<div class="card"><h2>2. Number to receive airtime</h2>
+<input id="phone" type="tel" inputmode="numeric" placeholder="07XX XXX XXX" maxlength="13" autocomplete="tel">
+<p class="err" id="err"></p>
+<label class="s" for="payer">M-Pesa number to pay from (optional, defaults to the number above)</label>
+<input id="payer" type="tel" inputmode="numeric" placeholder="07XX XXX XXX" maxlength="13"></div>
+
+<div class="card"><h2>3. Choose package</h2><div class="pk" id="pk"></div></div>
+
+<div class="card"><h2>Order summary</h2>
+<div class="sum"><span>Network</span><b id="sN">–</b></div>
+<div class="sum"><span>Number</span><b id="sP">–</b></div>
+<div class="sum"><span>You pay</span><b id="sA">–</b></div>
+<div class="sum"><span>Bonus ({{bonus}}%)</span><b id="sB">–</b></div>
+<div class="sum"><span>You receive</span><b class="tot" id="sT">–</b></div>
+<button class="buy" id="buy" disabled>Pay with M-Pesa</button>
+<p class="err" id="err2" style="text-align:center"></p>
+<p class="note">An M-Pesa prompt will be sent to your phone. Enter your PIN to complete payment.</p></div>
+</div>
+
+<div class="card ok" id="done" hidden>
+<h2 id="dT"></h2><p id="dM"></p>
+<button class="buy" id="again" hidden>Buy more airtime</button>
+</div>
+</div>
+
+<script>
+var NETS={{ networks|tojson }}, COLORS={Safaricom:"#0a8f3c",Airtel:"#e4002b",Telkom:"#0090d4"};
+var PKGS={{ packages|tojson }}, BONUS={{ bonus }}/100;
+var net=null,pkg=null,timer=null;
+var $=function(i){return document.getElementById(i)};
+var fmt=function(n){return "KSh "+n.toLocaleString("en-KE")};
+
+NETS.forEach(function(n){
+  var b=document.createElement("button");b.className="net";b.type="button";
+  b.style.setProperty("--c",COLORS[n]);b.setAttribute("aria-pressed","false");b.innerHTML="<i></i>"+n;
+  b.onclick=function(){net=n;[].forEach.call($("nets").children,function(e){e.setAttribute("aria-pressed","false")});b.setAttribute("aria-pressed","true");upd()};
+  $("nets").appendChild(b);
+});
+PKGS.forEach(function(a){
+  var b=document.createElement("button");b.className="p";b.type="button";b.setAttribute("aria-pressed","false");
+  b.innerHTML="<span>Pay</span><b>"+fmt(a)+"</b><em>Get "+fmt(Math.floor(a*(1+BONUS)))+"</em>";
+  b.onclick=function(){pkg=a;[].forEach.call($("pk").children,function(e){e.setAttribute("aria-pressed","false")});b.setAttribute("aria-pressed","true");upd()};
+  $("pk").appendChild(b);
+});
+
+function norm(v){var d=v.replace(/\D/g,"");if(d.indexOf("254")===0)d="0"+d.slice(3);return d}
+function ok(v){return /^0[17]\d{8}$/.test(norm(v))}
+function upd(){
+  var p=$("phone").value, good=ok(p), py=$("payer").value;
+  $("err").textContent=(norm(p).length>=9&&!good)?"Enter a valid Kenyan number, e.g. 0712345678":"";
+  $("sN").textContent=net||"–"; $("sP").textContent=good?norm(p):"–";
+  $("sA").textContent=pkg?fmt(pkg):"–";
+  $("sB").textContent=pkg?"+ "+fmt(Math.floor(pkg*BONUS)):"–";
+  $("sT").textContent=pkg?fmt(Math.floor(pkg*(1+BONUS))):"–";
+  $("buy").disabled=!(good&&net&&pkg&&(!py||ok(py)));
+}
+$("phone").addEventListener("input",upd);$("payer").addEventListener("input",upd);
+
+function show(title,msg,again){$("form").hidden=true;$("done").hidden=false;$("dT").textContent=title;$("dM").textContent=msg;$("again").hidden=!again;window.scrollTo(0,0)}
+
+$("buy").onclick=function(){
+  var b=$("buy");b.disabled=true;b.textContent="Sending M-Pesa prompt…";$("err2").textContent="";
+  fetch("/api/order",{method:"POST",headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({network:net,amount:pkg,recipient:$("phone").value,payer:$("payer").value})})
+  .then(function(r){return r.json().then(function(j){return {ok:r.ok,j:j}})})
+  .then(function(x){
+    if(!x.ok){throw new Error(x.j.error||"Something went wrong")}
+    show("Check your phone 📲","Enter your M-Pesa PIN to pay "+fmt(pkg)+". Waiting for confirmation…",false);
+    poll(x.j.ref,0);
+  })
+  .catch(function(e){$("err2").textContent=e.message;b.textContent="Pay with M-Pesa";upd()});
+};
+function poll(ref,n){
+  fetch("/api/status/"+ref).then(function(r){return r.json()}).then(function(s){
+    if(s.status==="DELIVERED"){show("Airtime sent ✓",fmt(s.airtime)+" "+s.network+" airtime delivered to "+s.recipient+".",true)}
+    else if(s.status==="PAID"||s.status==="PROCESSING"){show("Payment received ✓","Your "+fmt(s.airtime)+" "+s.network+" airtime for "+s.recipient+" is being processed. Order ref: "+ref,true)}
+    else if(s.status==="FAILED"){show("Payment not completed","The payment was cancelled or failed. No money was taken. Please try again.",true)}
+    else if(n>40){show("Still waiting…","If you were charged, your airtime will arrive shortly. Order ref: "+ref,true)}
+    else{timer=setTimeout(function(){poll(ref,n+1)},3000)}
+  }).catch(function(){timer=setTimeout(function(){poll(ref,n+1)},4000)});
+}
+$("again").onclick=function(){location.reload()};
+</script>
+</body>
+</html>

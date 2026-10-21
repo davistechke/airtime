@@ -1,0 +1,31 @@
+services:
+  - type: web
+    name: company-airtime-bulk
+    runtime: python
+    plan: starter            # persistent disk needs a paid plan
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn -w 2 -b 0.0.0.0:$PORT app:app
+    healthCheckPath: /
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.4
+      - key: DB_PATH
+        value: /var/data/orders.db
+      - key: FULFILLMENT
+        value: manual
+      - key: PUBLIC_BASE_URL
+        sync: false          # e.g. https://company-airtime-bulk.onrender.com
+      - key: PAYHERO_AUTH
+        sync: false
+      - key: PAYHERO_CHANNEL_ID
+        sync: false
+      - key: ADMIN_TOKEN
+        generateValue: true
+      - key: AT_USERNAME
+        sync: false
+      - key: AT_API_KEY
+        sync: false
+    disk:
+      name: orders-data
+      mountPath: /var/data
+      sizeGB: 1
